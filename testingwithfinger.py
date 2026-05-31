@@ -10,8 +10,7 @@ import MySQLdb
 from datetime import datetime
 
 # --- INSTÄLLNINGAR (ÄNDRA DESSA) ---
-PC_IP = "192.168.1.2"  # Skriv din dators IP-adress här
-#PC_IP = "192.168.0.101"  # Skriv din dators IP-adress här
+PC_IP = "192.168.0.101"  # Skriv din dators IP-adress här
 DB_USER = "pi_user"
 DB_PASS = "skola123"
 DB_NAME = "security_db"
@@ -20,7 +19,7 @@ DB_NAME = "security_db"
 pygame.mixer.init()
 pygame.mixer.music.load("larm.mp3")
 
-# MQTT Setup för Progress Bar [cite: 426, 437]
+# MQTT Setup för Progress Bar
 mqttc = mqtt.Client()
 mqttc.connect("broker.hivemq.com", 1883) 
 mqttc.loop_start()
@@ -30,7 +29,7 @@ uart = serial.Serial("/dev/ttyS0", baudrate=57600, timeout=1)
 finger = adafruit_fingerprint.Adafruit_Fingerprint(uart)
 
 def send_realtime_data():
-    """Läser analog sensor och skickar till Progress Bar via MQTT [cite: 458, 488]"""
+    """Läser analog sensor och skickar till Progress Bar via MQTT"""
     try:
         voltage = explorerhat.analog.one.read()
         percent = int((voltage / 5.0) * 100)
@@ -64,7 +63,8 @@ def check_finger(expected_id):
     return False
     
 def verify_user_credentials(pseudo, password):
-    """Kontrollerar användarens uppgifter och returnerar deras fingerprint_id"""
+    """Kontrollerar användarens uppgifter och returnerar deras fingerprint_id. 
+    Används även för att bekräfta att användaren finns vid finger-registrering."""
     try:
         db = MySQLdb.connect(host=PC_IP, user=DB_USER, passwd=DB_PASS, db=DB_NAME)
         cur = db.cursor()
@@ -72,7 +72,8 @@ def verify_user_credentials(pseudo, password):
         row = cur.fetchone()
         db.close()
         if row:
-            return row[0] # Returnerar t.ex. 65
+            # Returnerar ID om det finns, eller strängen "NONE_ASSIGNED" om fältet är NULL (nytt konto)
+            return row[0] if row[0] is not None else "NONE_ASSIGNED"
     except Exception as e:
         print(f"Kunde inte verifiera mot DB: {e}")
     return None
@@ -109,21 +110,80 @@ def enroll_finger_with_db(location, pseudo):
                 print(f"Kunde inte spara i DB: {e}")
     return False
 
+def delete_all_users_except_admin(pseudo, password):
+    """Verifierar admin och raderar alla vanliga användares fingrar från sensorn och DB"""
+    try:
+        db = MySQLdb.connect(host=PC_IP, user=DB_USER, passwd=DB_PASS, db=DB_NAME)
+        cur = db.cursor()
+        
+        # 1. Kontrollera om inloggad person är admin
+        cur.execute("SELECT role FROM users WHERE pseudo=%s AND password=%s", (pseudo, password))
+        user_row = cur.fetchone()
+        
+        if not user_row or user_row[0] != "admin":
+            print("[!] Åtkomst nekad: Endast administratörer kan rensa systemet.")
+            db.close()
+            return
+
+        print("\n[OK] Admin verifierad. Påbörjar rensning...")
+        
+        # 2. Hämta alla fingerprint_id som INTE tillhör admins och inte är NULL
+        cur.execute("SELECT fingerprint_id, pseudo FROM users WHERE role != 'admin' AND fingerprint_id IS NOT NULL")
+        users_to_delete = cur.fetchall()
+        
+        # 3. Loopa och radera från hårdvarusensorn
+        deleted_count = 0
+        for row in users_to_delete:
+            f_id = row[0]
+            user_pseudo = row[1]
+            
+            if finger.delete_model(f_id) == adafruit_fingerprint.OK:
+                print(f" -> Raderade finger-ID {f_id} ({user_pseudo}) från sensorn.")
+                deleted_count += 1
+            else:
+                print(f" -> [!] Kunde inte radera finger-ID {f_id} från sensorn (Kanske redan tom?).")
+
+        # 4. Radera kopplingarna i databasen för alla som inte är admin
+        cur.execute("UPDATE users SET fingerprint_id = NULL WHERE role != 'admin'")
+        db.commit()
+        db.close()
+        
+        print(f"\nRensning klar! Totalt {deleted_count} fingrar raderades. Databasen är återställd.")
+        
+    except Exception as e:
+        print(f"Ett fel uppstod vid rensning: {e}")
+
 # --- HUVUDLOOP ---
 try:
     while True:
-        send_realtime_data() # Uppdatera Progress Bar hela tiden [cite: 357]
+        send_realtime_data() # Uppdatera Progress Bar hela tiden
         print("\n--- SYSTEM-MENY ---")
         print("e) Registrera finger till användare")
         print("o) Aktivera larm")
+        print("d) Radera alla användares fingrar (Kräver Admin)")
         print("q) Avsluta")
         val = input("> ")
 
         if val == "e":
-            pseudo = input("Ange användarnamn (pseudo) för en person som redan skapat konto på hemsidan: ")
-            id_nr = int(input("Välj ID-nummer i sensorn (0-161): "))
+            print("\n--- VERIFIERING KRÄVS FÖR ATT REGISTRERA FINGER ---")
+            pseudo = input("Användarnamn (pseudo): ")
+            password = input("Lösenord: ")
             
+            # Kontrollera om användarnamnet och lösenordet är rätt
+            account_check = verify_user_credentials(pseudo, password)
+            
+            if account_check is None:
+                print("[!] Fel användarnamn eller lösenord. Registreringen avbröts.")
+                continue # Hoppa tillbaka till huvudmenyn
+                
+            id_nr = int(input("Välj ID-nummer i sensorn (0-161): "))
             enroll_finger_with_db(id_nr, pseudo)
+
+        elif val == "d":
+            print("\n--- BEHÖRIGHETSKONTROLL ---")
+            admin_pseudo = input("Ange Admin-användarnamn: ")
+            admin_password = input("Ange Admin-lösenord: ")
+            delete_all_users_except_admin(admin_pseudo, admin_password)
 
         elif val == "o":
             print("\n--- VERIFIERING KRÄVS FÖR ATT AKTIVERA LARM ---")
@@ -133,9 +193,10 @@ try:
             # Kontrollera om användaren finns och hämta deras ID
             expected_id = verify_user_credentials(pseudo, password)
             
-            if expected_id is None:
-                print("[!] Fel användarnamn eller lösenord. Larmet kunde inte aktiveras.")
-                continue # Hoppa tillbaka till huvudmenyn
+            # Om kontot är helt nytt kan id vara "NONE_ASSIGNED", vilket också ska blockeras vid larmstart
+            if expected_id is None or expected_id == "NONE_ASSIGNED":
+                print("[!] Fel uppgifter eller så har kontot inte registrerat sitt finger än.")
+                continue 
                 
             # Hämta tidpunkt för aktivering
             time_now = datetime.now().strftime("%H:%M:%S")
