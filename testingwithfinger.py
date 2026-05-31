@@ -19,10 +19,19 @@ DB_NAME = "security_db"
 pygame.mixer.init()
 pygame.mixer.music.load("larm.mp3")
 
-# MQTT Setup för Progress Bar
+# MQTT Setup med Last Will och Heartbeat
 mqttc = mqtt.Client()
-mqttc.connect("broker.hivemq.com", 1883) 
+
+# 1. Definiera "Sista viljan" (Last Will) om Pajen dör plötsligt
+# Om anslutningen bryts kommer HiveMQ automatiskt skicka "Offline" till hemsidan
+mqttc.will_set("security/heartbeat", "Offline", retain=True)
+
+# 2. Anslut med keepalive=15 (Brokern kollar var 15:e sekund att vi lever)
+mqttc.connect("broker.hivemq.com", 1883, keepalive=15) 
 mqttc.loop_start()
+
+# 3. Skicka direkt ut att systemet är Online och uppkopplat nu
+mqttc.publish("security/heartbeat", "Online", retain=True)
 
 # Fingeravtrycksläsare Setup
 uart = serial.Serial("/dev/ttyS0", baudrate=57600, timeout=1)
