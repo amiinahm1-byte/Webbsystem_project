@@ -25,6 +25,9 @@ $loggedInRole = $_SESSION['role'];
     </style>
 </head>
 <body>
+    <div id="connectionStatus" class="w3-container w3-green w3-center" style="padding: 5px; margin-bottom: 10px; font-weight: bold; border-radius: 5px;">
+        ● Connected to Raspberry Pi (System Online)
+    </div>
     <div class="w3-container container">
         <p>Logged in as: <b><?php echo $loggedInUser; ?></b> (<i><?php echo $loggedInRole; ?></i>)</p>
         <a href="home.php" class="w3-button w3-red w3-round">Back to home</a>
@@ -54,22 +57,42 @@ $loggedInRole = $_SESSION['role'];
         var currentRole = "<?php echo $loggedInRole; ?>";
         var alarmStartedBy = ""; 
 
+        // UPPDATERAD BEHÖRIGHETSKONTROLL (Säkrad för Admin)
         function hasAccess() {
-            return (currentRole === "admin" || alarmStartedBy === "" || currentUser === alarmStartedBy);
+            // REGEL: Om du är admin, se ALLTID allt direkt (löser låsningsfelet för admin!)
+            if (currentRole === "admin") {
+                return true;
+            }
+            // Vanliga användare ser bara om larmet är inaktivt eller om de själva startade det
+            return (alarmStartedBy === "" || currentUser === alarmStartedBy);
         }
 
-        // Anslut till MQTT Broker
+        // Anslut till HiveMQ-brokern över WebSockets (Port 8000)
         var client = new Paho.MQTT.Client("broker.hivemq.com", 8000, "web_client_" + Math.random());
 
         client.onMessageArrived = function(message) {
             var topic = message.destinationName;
             var val = message.payloadString;
             
-            // Hantera status i bakgrunden för behörighet och larmindikering
+            // 1. Fånga upp nätverksnotisen (Heartbeat / Last Will)
+            if (topic === "security/heartbeat") {
+                var connBox = document.getElementById("connectionStatus");
+                if (val === "Online") {
+                    connBox.innerHTML = "● Connected to Raspberry Pi (System Online)";
+                    connBox.className = "w3-container w3-green w3-center";
+                } else {
+                    connBox.innerHTML = "⚠️ NOTIFICATION: Connection to Raspberry Pi Lost (System Offline)";
+                    connBox.className = "w3-container w3-red w3-center w3-animate-fading";
+                }
+                return;
+            }
+
+            // 2. Hantera övergripande larmstatus
             if (topic === "security/status") {
                 if (val.startsWith("Larmat av ")) {
                     alarmStartedBy = val.replace("Larmat av ", "");
-                    // Dölj larmrutan om ett nytt larm startas
+                    
+                    // Om du är admin, skriv ut vem som äger sessionen och visa raden
                     if (currentRole === "admin") {
                         document.getElementById("alarmOwnerText").innerHTML = alarmStartedBy;
                         document.getElementById("adminOwnerBox").classList.remove("hidden");
@@ -77,13 +100,11 @@ $loggedInRole = $_SESSION['role'];
                     document.getElementById("alarmAlert").classList.add("hidden"); 
                 }
 
-                // Kolla om larmet faktiskt har blivit utlöst (och att rätt person är inloggad)
-                if (val === "Larm on!" && hasAccess()) {
+                if (val === "💥 LARM UTALÖST!" && hasAccess()) {
                     document.getElementById("alarmAlert").classList.remove("hidden");
                 }
 
-                // Om larmet stängs av eller återställs, dölj röda boxen och nollställ ägaren
-                if (val.includes("Återställt") || val === "Safe" || val.includes("stoppat")) {
+                if (val.includes("Återställt") || val === "Grönt system - Säkert" || val.includes("stoppat")) {
                     document.getElementById("alarmAlert").classList.add("hidden");
                     document.getElementById("adminOwnerBox").classList.add("hidden");
                     alarmStartedBy = ""; 
@@ -91,7 +112,7 @@ $loggedInRole = $_SESSION['role'];
                 return;
             } 
             
-            // Uppdatera resten av gränssnittet om man har tillgång
+            // 3. Uppdatera tidtagningar och loggar baserat på behörighet
             if (hasAccess()) {
                 if (topic === "security/countdown") {
                     document.getElementById("countdownText").innerHTML = val + "s";
@@ -112,7 +133,7 @@ $loggedInRole = $_SESSION['role'];
         };
 
         client.connect({onSuccess: function() {
-            console.log("Ansluten till MQTT");
+            console.log("Ansluten till MQTT Broker");
             client.subscribe("security/#"); 
         }});
     </script>
