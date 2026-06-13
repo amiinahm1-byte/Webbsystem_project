@@ -28,11 +28,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="utf-8">
     <link rel="stylesheet" href="mystyle.css">
     <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-    <style>
-        .center-box { max-width: 450px; margin: 50px auto; padding: 30px; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        input[type="text"], input[type="password"] { width: 100%; padding: 8px; margin: 8px 0 15px 0; border: 1px solid #ccc; border-radius: 4px; }
-        input[type="submit"] { width: 100%; background-color: #008CBA; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-    </style>
+    
 </head>
 <body style="background-color: #f4f4f4;">
 
@@ -41,7 +37,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
 
     <div class="w3-container">
-        <div class="center-box w3-animate-right">
+        <div class="center-box-register w3-animate-right">
             <h3 class="w3-center" style="margin-bottom: 20px; font-weight: bold;">Skapa konto</h3>
             
             <form action="register.php" method="post">
@@ -57,7 +53,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <label><b>Second Name</b></label>
                 <input type="text" name="last_name" required>
                 
-                <input type="submit" value="Registrera konto">
+                <input type="submit" value="Registrera konto" class="submut-btn-register">
             </form>
             
             <div class="w3-center" style="margin-top: 20px;">
