@@ -36,7 +36,7 @@ if (empty($_SESSION['pseudo'])) {
                 (<i style="font-size: 14px;"><?php echo $_SESSION['role']; ?></i>)
             </p>
             
-            <p style="color: #666;">Click below for controlpanel and real time updates</p>
+            
             
             <a href="gui.php" class="status-btn w3-card-4">Open Panel</a>
 
