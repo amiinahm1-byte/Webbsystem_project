@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-// Säkerhetsspärr: Endast admin får se denna sida
+
 if (empty($_SESSION['pseudo']) || $_SESSION['role'] !== 'admin') {
     header("Location: home.php");
     exit();
@@ -11,7 +11,7 @@ $mysqli = new mysqli("localhost", "pi_user", "skola123", "security_db");
 $message = "";
 $message_color = "red";
 
-// Hantera radering när admin har fyllt i sina bekräftelseuppgifter
+
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_delete'])) {
     $admin_pseudo = $_POST['admin_pseudo'];
     $admin_password = $_POST['admin_password'];
@@ -75,7 +75,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_delete'])) {
 
             <div style="margin-top: 20px;">
                 <?php
-                // Hämta alla användare som inte är admin för att lista dem
+                
                 $result = $mysqli->query("SELECT pseudo, first_name, last_name, role FROM users WHERE role != 'admin'");
                 
                 if ($result->num_rows > 0) {
@@ -84,7 +84,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_delete'])) {
                         echo "<div>";
                         echo "<b>" . htmlspecialchars($row['pseudo']) . "</b> - " . htmlspecialchars($row['first_name']) . " " . htmlspecialchars($row['last_name']);
                         echo "</div>";
-                        // När man klickar här öppnas modalen (pop-upen) via JavaScript och sätter rätt användarnamn i formuläret
+                        
                         echo "<button type='button' class='remove-btn' onclick='openConfirmModal(\"" . htmlspecialchars($row['pseudo']) . "\")'>Remove</button>";
                         echo "</div>";
                     }
