@@ -5,7 +5,7 @@ if (empty($_SESSION['pseudo'])) {
     exit();
 }
 
-// Skicka med PHP-sessionsvariablerna till JavaScript
+
 $loggedInUser = $_SESSION['pseudo'];
 $loggedInRole = $_SESSION['role'];
 ?>
@@ -26,14 +26,14 @@ $loggedInRole = $_SESSION['role'];
 </head>
 <body>
     <div id="connectionStatus" class="w3-container w3-green w3-center" style="padding: 5px; margin-bottom: 10px; font-weight: bold; border-radius: 5px;">
-        ● Connected to Raspberry Pi (System Online)
+        Connected to Raspberry Pi (System Online)
     </div>
     <div class="w3-container container">
         <p>Logged in as: <b><?php echo $loggedInUser; ?></b> (<i><?php echo $loggedInRole; ?></i>)</p>
         <a href="home.php" class="w3-button w3-red w3-round">Back to home</a>
     </div>
 
-    <div id="alarmAlert" class="alarm-trigger-box w3-animate-fading hidden">
+    <div id="alarmAlert" class="alarm-trigger-box hidden">
         Larm turned on
     </div>
 
@@ -78,19 +78,19 @@ $loggedInRole = $_SESSION['role'];
             if (topic === "security/heartbeat") {
                 var connBox = document.getElementById("connectionStatus");
                 if (val === "Online") {
-                    connBox.innerHTML = "● Connected to Raspberry Pi (System Online)";
+                    connBox.innerHTML = "Connected to Raspberry Pi (System Online)";
                     connBox.className = "w3-container w3-green w3-center";
                 } else {
-                    connBox.innerHTML = "⚠️ NOTIFICATION: Connection to Raspberry Pi Lost (System Offline)";
-                    connBox.className = "w3-container w3-red w3-center w3-animate-fading";
+                    connBox.innerHTML = "NOTIFICATION: Connection to Raspberry Pi Lost (System Offline)";
+                    connBox.className = "w3-container w3-red w3-center";
                 }
                 return;
             }
 
             // 2. Hantera övergripande larmstatus
             if (topic === "security/status") {
-                if (val.startsWith("Larmat av ")) {
-                    alarmStartedBy = val.replace("Larmat av ", "");
+                if (val.startsWith("Larm by ")) {
+                    alarmStartedBy = val.replace("Larm by ", "");
                     
                     // Om du är admin, skriv ut vem som äger sessionen och visa raden
                     if (currentRole === "admin") {
@@ -100,11 +100,11 @@ $loggedInRole = $_SESSION['role'];
                     document.getElementById("alarmAlert").classList.add("hidden"); 
                 }
 
-                if (val === "💥 LARM UTALÖST!" && hasAccess()) {
+                if (val === "LARM STARTED!" && hasAccess()) {
                     document.getElementById("alarmAlert").classList.remove("hidden");
                 }
 
-                if (val.includes("Återställt") || val === "Grönt system - Säkert" || val.includes("stoppat")) {
+                if (val.includes("Restored") || val === "Secured" || val.includes("Disarmed")) {
                     document.getElementById("alarmAlert").classList.add("hidden");
                     document.getElementById("adminOwnerBox").classList.add("hidden");
                     alarmStartedBy = ""; 
@@ -120,7 +120,7 @@ $loggedInRole = $_SESSION['role'];
                 } 
                 else if (topic === "security/time_armed") {
                     document.getElementById("timeArmed").innerHTML = val;
-                    document.getElementById("timeMotion").innerHTML = "-";
+                    document.getElementById("timeMotion").innerHTML = "-"; // empty
                     document.getElementById("timeDisarmed").innerHTML = "-";
                 } 
                 else if (topic === "security/time_motion") {
