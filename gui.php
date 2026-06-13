@@ -5,7 +5,7 @@ if (empty($_SESSION['pseudo'])) {
     exit();
 }
 
-
+// Skicka med PHP-sessionsvariablerna till JavaScript
 $loggedInUser = $_SESSION['pseudo'];
 $loggedInRole = $_SESSION['role'];
 ?>
@@ -13,16 +13,9 @@ $loggedInRole = $_SESSION['role'];
 <html>
 <head>
     <title>Security System - Panel</title>
+    <link rel="stylesheet" href="mystyle.css">
     <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
-    <style>
-        body { font-family: Arial; padding: 20px; background-color: #f4f4f4; }
-        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .log-box { font-size: 18px; padding: 10px; background: #fafafa; border-left: 5px solid #2196F3; margin: 10px 0; }
-        .countdown-badge { font-size: 48px; font-weight: bold; color: #f44336; text-align: center; }
-        .hidden { display: none; } /* Döljer element helt */
-        .alarm-trigger-box { background-color: #f44336; color: white; padding: 15px; border-radius: 10px; font-weight: bold; font-size: 20px; text-align: center; margin-bottom: 20px; }
-    </style>
 </head>
 <body>
     <div id="connectionStatus" class="w3-container w3-green w3-center" style="padding: 5px; margin-bottom: 10px; font-weight: bold; border-radius: 5px;">
@@ -45,10 +38,10 @@ $loggedInRole = $_SESSION['role'];
 
         <div class="w3-container container">
             <h3>Log </h3>
-            <div id="adminOwnerBox" class="log-box hidden" style="border-left-color: #9c27b0;"> <b>Larm armed by:</b> <span id="alarmOwnerText">-</span></div>
+            <div id="adminOwnerBox" class="log-box hidden" > <b>Larm armed by:</b> <span id="alarmOwnerText">-</span></div>
             <div class="log-box"> <b>Larm armed at:</b> <span id="timeArmed">-</span></div>
-            <div class="log-box" style="border-left-color: #ffeb3b;"> <b>Movement detected at:</b> <span id="timeMotion">-</span></div>
-            <div class="log-box" style="border-left-color: #4CAF50;"> <b>Larm dissarmed at:</b> <span id="timeDisarmed">-</span></div>
+            <div class="log-box" > <b>Movement detected at:</b> <span id="timeMotion">-</span></div>
+            <div class="log-box" > <b>Larm dissarmed at:</b> <span id="timeDisarmed">-</span></div>
         </div>
     </div>
 
