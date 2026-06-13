@@ -1,6 +1,6 @@
 <?php
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $mysqli = new mysqli("localhost", "pi_user", "jacob0416", "security_db");
+    $mysqli = new mysqli("localhost", "pi_user", "skola123", "security_db");
 
     if (!$mysqli->connect_errno) {
         $pseudo = $_POST['pseudo'];
