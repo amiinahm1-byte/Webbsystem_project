@@ -10,7 +10,7 @@ import MySQLdb
 from datetime import datetime
 
 # --- INSTÄLLNINGAR (ÄNDRA DESSA) ---
-PC_IP = "192.168.0.101"  # Skriv din dators IP-adress här
+PC_IP = "192.168.1.4"  # Skriv din dators IP-adress här
 DB_USER = "pi_user"
 DB_PASS = "skola123"
 DB_NAME = "security_db"
@@ -37,14 +37,6 @@ mqttc.publish("security/heartbeat", "Online", retain=True)
 uart = serial.Serial("/dev/ttyS0", baudrate=57600, timeout=1)
 finger = adafruit_fingerprint.Adafruit_Fingerprint(uart)
 
-def send_realtime_data():
-    """Läser analog sensor och skickar till Progress Bar via MQTT"""
-    try:
-        voltage = explorerhat.analog.one.read()
-        percent = int((voltage / 5.0) * 100)
-        mqttc.publish("security/sensor", str(percent))
-    except:
-        pass
 
 def check_finger(expected_id):
     """Kollar om fingret finns i sensorn OCH om det matchar personen som larmade på"""
@@ -60,15 +52,15 @@ def check_finger(expected_id):
                         row = cur.fetchone()
                         db.close()
                         if row:
-                            print(f"\n[OK] Välkommen tillbaka {row[0]}!")
+                            print(f"\n[OK] Welcome Back {row[0]}!")
                             return True
                     except Exception as e:
                         print(f"Databasfel: {e}")
                         return True
                 else:
-                    print("\n[!] Åtkomst nekad! Endast personen som aktiverade larmet kan stänga av det.")
+                    print("\n[!] No access! Only the person that armed it can disarm it.")
             else:
-                print("\n[!] Ej Beviljad - Okänt finger")
+                print("\n[!] No access - Unknown finger")
     return False
     
 def verify_user_credentials(pseudo, password):
@@ -84,13 +76,13 @@ def verify_user_credentials(pseudo, password):
             # Returnerar ID om det finns, eller strängen "NONE_ASSIGNED" om fältet är NULL (nytt konto)
             return row[0] if row[0] is not None else "NONE_ASSIGNED"
     except Exception as e:
-        print(f"Kunde inte verifiera mot DB: {e}")
+        print(f"Couldn't verify with DB: {e}")
     return None
 
 def enroll_finger_with_db(location, pseudo):
     """Kopplar ett sparat finger till en redan existerande webb-användare"""
     for img_num in range(1, 3):
-        print(f"Sätt finger på läsaren (prov {img_num})...", end="")
+        print(f"Put your finger in the sensor (prov {img_num})...", end="")
         while True:
             send_realtime_data()
             if finger.get_image() == adafruit_fingerprint.OK:
@@ -113,10 +105,10 @@ def enroll_finger_with_db(location, pseudo):
                 
                 db.commit()
                 db.close()
-                print(f"Klart! Fingret (ID {location}) är nu kopplat till {pseudo}.")
+                print(f"Done! Finger (ID {location}) is now connected to {pseudo}.")
                 return True
             except Exception as e:
-                print(f"Kunde inte spara i DB: {e}")
+                print(f"Couldn't save to DB: {e}")
     return False
 
 def delete_all_users_except_admin(pseudo, password):
@@ -130,11 +122,11 @@ def delete_all_users_except_admin(pseudo, password):
         user_row = cur.fetchone()
         
         if not user_row or user_row[0] != "admin":
-            print("[!] Åtkomst nekad: Endast administratörer kan rensa systemet.")
+            print("[!] Access Denied: Only the administrator can remove.")
             db.close()
             return
 
-        print("\n[OK] Admin verifierad. Påbörjar rensning...")
+        print("\n[OK] Admin verified. Start removing...")
         
         # 2. Hämta alla fingerprint_id som INTE tillhör admins och inte är NULL
         cur.execute("SELECT fingerprint_id, pseudo FROM users WHERE role != 'admin' AND fingerprint_id IS NOT NULL")
@@ -147,74 +139,74 @@ def delete_all_users_except_admin(pseudo, password):
             user_pseudo = row[1]
             
             if finger.delete_model(f_id) == adafruit_fingerprint.OK:
-                print(f" -> Raderade finger-ID {f_id} ({user_pseudo}) från sensorn.")
+                print(f" -> Removed finger-ID {f_id} ({user_pseudo}) from sensor.")
                 deleted_count += 1
             else:
-                print(f" -> [!] Kunde inte radera finger-ID {f_id} från sensorn (Kanske redan tom?).")
+                print(f" -> [!] Couldn't remove finger-ID {f_id} from sensor (maybe already empty).")
 
         # 4. Radera kopplingarna i databasen för alla som inte är admin
         cur.execute("UPDATE users SET fingerprint_id = NULL WHERE role != 'admin'")
         db.commit()
         db.close()
         
-        print(f"\nRensning klar! Totalt {deleted_count} fingrar raderades. Databasen är återställd.")
+        print(f"\nRemoving Done! Total {deleted_count} fingers removed. Database is restored.")
         
     except Exception as e:
-        print(f"Ett fel uppstod vid rensning: {e}")
+        print(f"Error happened when removing: {e}")
 
 # --- HUVUDLOOP ---
 try:
     while True:
         send_realtime_data() # Uppdatera Progress Bar hela tiden
         print("\n--- SYSTEM-MENY ---")
-        print("e) Registrera finger till användare")
-        print("o) Aktivera larm")
-        print("d) Radera alla användares fingrar (Kräver Admin)")
-        print("q) Avsluta")
+        print("e) Register finger to user")
+        print("o) Activate larm")
+        print("d) Remove all user fingers (Only Admin)")
+        print("q) End")
         val = input("> ")
 
         if val == "e":
-            print("\n--- VERIFIERING KRÄVS FÖR ATT REGISTRERA FINGER ---")
-            pseudo = input("Användarnamn (pseudo): ")
-            password = input("Lösenord: ")
+            print("\n--- Need to verify before registering finger ---")
+            pseudo = input("Username (pseudo): ")
+            password = input("Password: ")
             
             # Kontrollera om användarnamnet och lösenordet är rätt
             account_check = verify_user_credentials(pseudo, password)
             
             if account_check is None:
-                print("[!] Fel användarnamn eller lösenord. Registreringen avbröts.")
+                print("[!] Wrong username or password. Registering was interrupted.")
                 continue # Hoppa tillbaka till huvudmenyn
                 
-            id_nr = int(input("Välj ID-nummer i sensorn (0-161): "))
+            id_nr = int(input("Choose ID-nummer on sensor (1-161): "))
             enroll_finger_with_db(id_nr, pseudo)
 
         elif val == "d":
-            print("\n--- BEHÖRIGHETSKONTROLL ---")
-            admin_pseudo = input("Ange Admin-användarnamn: ")
-            admin_password = input("Ange Admin-lösenord: ")
+            print("\n--- Access Check ---")
+            admin_pseudo = input("Enter Admin-username: ")
+            admin_password = input("Enter Admin-password: ")
             delete_all_users_except_admin(admin_pseudo, admin_password)
 
         elif val == "o":
-            print("\n--- VERIFIERING KRÄVS FÖR ATT AKTIVERA LARM ---")
-            pseudo = input("Användarnamn: ")
-            password = input("Lösenord: ")
+            print("\n--- Need to verify before activating larm ---")
+            pseudo = input("Username: ")
+            password = input("Password: ")
             
             # Kontrollera om användaren finns och hämta deras ID
             expected_id = verify_user_credentials(pseudo, password)
             
             # Om kontot är helt nytt kan id vara "NONE_ASSIGNED", vilket också ska blockeras vid larmstart
             if expected_id is None or expected_id == "NONE_ASSIGNED":
-                print("[!] Fel uppgifter eller så har kontot inte registrerat sitt finger än.")
+                print("[!] Wrong information or the account has not registered finger ye.")
                 continue 
                 
             # Hämta tidpunkt för aktivering
             time_now = datetime.now().strftime("%H:%M:%S")
             
             # Skicka till webbsidan via MQTT
-            mqttc.publish("security/status", f"Larmat av {pseudo}")
+            mqttc.publish("security/status", f"Larm by {pseudo}")
             mqttc.publish("security/time_armed", time_now)
             
-            print(f"\n[LARM AKTIVERAT av {pseudo} kl {time_now}] Väntar på rörelse...")
+            print(f"\n[Larm Activated by {pseudo} at {time_now}] Waiting for movement...")
             armed = True
             while armed:
                 send_realtime_data()
@@ -223,25 +215,25 @@ try:
                     if explorerhat.input.one.read() == 0:
                         # Rörelse upptäckt! Hämta tidpunkt
                         motion_time = datetime.now().strftime("%H:%M:%S")
-                        mqttc.publish("security/status", "🚨 RÖRELSE DETEKTERAD!")
+                        mqttc.publish("security/status", "MOVEMENT DETECTED!")
                         mqttc.publish("security/time_motion", motion_time)
                         
-                        print(f"\n>>> RÖRELSE DETEKTERAD kl {motion_time}! 20 sekunder på dig...")
+                        print(f"\n>>> MOVEMENT DETECTED at {motion_time}! 20 seconds to disarm...")
                         start_tid = time.time()
                         access = False
                         
                         while time.time() - start_tid < 20:
                             send_realtime_data()
                             tid_kvar = int(20 - (time.time() - start_tid))
-                            print(f"Tid kvar att larma av: {tid_kvar} sekunder...    ", end="\r")
+                            print(f"Time left to disarm: {tid_kvar} seconds...    ", end="\r")
                             
                             # Skicka nedräkningen live till hemsidan!
                             mqttc.publish("security/countdown", str(tid_kvar))
                             
                             if check_finger(expected_id): # Skicka med det förväntade ID:t
-                                print("\n[OK] Avlarmat.")
+                                print("\n[OK] Disarmed.")
                                 disarm_time = datetime.now().strftime("%H:%M:%S")
-                                mqttc.publish("security/status", "Grönt system - Säkert")
+                                mqttc.publish("security/status", "Green System - Secured")
                                 mqttc.publish("security/time_disarmed", disarm_time)
                                 mqttc.publish("security/countdown", "0")
                                 access = True
@@ -250,8 +242,8 @@ try:
                             time.sleep(0.1)
 
                         if not access:
-                            print("\n!!! LARM STARTAR !!!")
-                            mqttc.publish("security/status", "💥 LARM UTALÖST!")
+                            print("\nLARM STARTED!")
+                            mqttc.publish("security/status", "LARM STARTED!")
                             pygame.mixer.music.play(-1)
                             
                             while not check_finger(expected_id):
@@ -259,9 +251,9 @@ try:
                                 time.sleep(0.2)
                                 
                             pygame.mixer.music.stop()
-                            print("[OK] Larm stoppat.")
+                            print("[OK] Larm Disarmed.")
                             disarm_time = datetime.now().strftime("%H:%M:%S")
-                            mqttc.publish("security/status", "Grönt system - Återställt efter larm")
+                            mqttc.publish("security/status", "Green System - Restored after larm")
                             mqttc.publish("security/time_disarmed", disarm_time)
                             mqttc.publish("security/countdown", "0")
                             armed = False
@@ -269,4 +261,4 @@ try:
         elif val == "q": break
 
 except KeyboardInterrupt:
-    print("\nAvslutar...")
+    print("\nEnding...")
