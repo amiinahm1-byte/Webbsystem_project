@@ -5,7 +5,7 @@ if (empty($_SESSION['pseudo'])) {
     exit();
 }
 
-// Skicka med PHP-sessionsvariablerna till JavaScript
+//session variables to javascript
 $loggedInUser = $_SESSION['pseudo'];
 $loggedInRole = $_SESSION['role'];
 ?>
@@ -46,57 +46,68 @@ $loggedInRole = $_SESSION['role'];
     </div>
 
     <script>
+        //passes pseudo and role
         var currentUser = "<?php echo $loggedInUser; ?>";
         var currentRole = "<?php echo $loggedInRole; ?>";
-        var alarmStartedBy = ""; 
+        var alarmStartedBy = ""; //keeps the pseudo that set the alarm
 
-        // UPPDATERAD BEHÖRIGHETSKONTROLL (Säkrad för Admin)
+        //grants full access on the log
         function hasAccess() {
-            // REGEL: Om du är admin, se ALLTID allt direkt (löser låsningsfelet för admin!)
+            
             if (currentRole === "admin") {
                 return true;
             }
-            // Vanliga användare ser bara om larmet är inaktivt eller om de själva startade det
+            //checks if system is idle or client maatches session
             return (alarmStartedBy === "" || currentUser === alarmStartedBy);
         }
 
-        // Anslut till HiveMQ-brokern över WebSockets (Port 8000)
+        //connection pipelines to HiveMQ over WebSOcket port 8000
         var client = new Paho.MQTT.Client("broker.hivemq.com", 8000, "web_client_" + Math.random());
 
+        //fires instantly whenever any message packet drops down from cloud broker
         client.onMessageArrived = function(message) {
-            var topic = message.destinationName;
-            var val = message.payloadString;
+            var topic = message.destinationName; //extracts the path topic
+            var val = message.payloadString; //extracts the raw message data from incoming packets
             
-            // 1. Fånga upp nätverksnotisen (Heartbeat / Last Will)
-            if (topic === "security/heartbeat") {
+            //checks connection status from the Raspberry Pi
+            if (topic === "security/heartbeat") { //topic
                 var connBox = document.getElementById("connectionStatus");
-                if (val === "Online") {
+                if (val === "Online") { //green meaning connected
                     connBox.innerHTML = "Connected to Raspberry Pi (System Online)";
                     connBox.className = "w3-container w3-green w3-center";
-                } else {
+                } else { //red meaning no connection
                     connBox.innerHTML = "NOTIFICATION: Connection to Raspberry Pi Lost (System Offline)";
                     connBox.className = "w3-container w3-red w3-center";
                 }
                 return;
             }
 
-            // 2. Hantera övergripande larmstatus
+            //evalueates state changes
             if (topic === "security/status") {
                 if (val.startsWith("Larm by ")) {
-                    alarmStartedBy = val.replace("Larm by ", "");
+                    alarmStartedBy = val.replace("Larm by ", ""); //isolate the pseudo
                     
-                    // Om du är admin, skriv ut vem som äger sessionen och visa raden
+                    /*
+                    if role is admin it exposes the hidden data box
+                    row on screen, which is who set the alarm. 
+                    */
                     if (currentRole === "admin") {
                         document.getElementById("alarmOwnerText").innerHTML = alarmStartedBy;
                         document.getElementById("adminOwnerBox").classList.remove("hidden");
                     }
                     document.getElementById("alarmAlert").classList.add("hidden"); 
                 }
-
+                /*
+                before projecting that the larm has started it checks who 
+                has access, the admin has access or the user that matches the session.
+                check line 55
+                */
                 if (val === "LARM STARTED!" && hasAccess()) {
+                    //show active alert box
                     document.getElementById("alarmAlert").classList.remove("hidden");
                 }
 
+                //flush old parameters once system transitions to seure state
                 if (val.includes("Restored") || val === "Secured" || val.includes("Disarmed")) {
                     document.getElementById("alarmAlert").classList.add("hidden");
                     document.getElementById("adminOwnerBox").classList.add("hidden");
@@ -105,7 +116,11 @@ $loggedInRole = $_SESSION['role'];
                 return;
             } 
             
-            // 3. Uppdatera tidtagningar och loggar baserat på behörighet
+            /*
+            validates user permsission before routing real-time MQTT
+            payload (countdown, timestamps) into the log fields
+            */
+            
             if (hasAccess()) {
                 if (topic === "security/countdown") {
                     document.getElementById("countdownText").innerHTML = val + "s";
@@ -124,9 +139,11 @@ $loggedInRole = $_SESSION['role'];
                 }
             }
         };
-
+        //asynchronous socket hookup routine
         client.connect({onSuccess: function() {
             console.log("Ansluten till MQTT Broker");
+            //directs HiveMQ to route all traffic beginning with "security" 
+            //down into this web window execution path
             client.subscribe("security/#"); 
         }});
     </script>
