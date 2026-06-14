@@ -20,6 +20,7 @@ session_start();
             <h3 class="w3-center" style="margin-bottom: 20px; font-weight: bold;">Logga in</h3>
             
             <?php
+            //checks the URL parameters, if successful
             if (!empty($_GET['msg']) && $_GET['msg'] == 'registered') {
                 echo "<p class='w3-center' style='color:green; font-weight:bold;'>Konto skapat! Logga in här under.</p>";
             }
