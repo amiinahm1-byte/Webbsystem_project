@@ -1,36 +1,43 @@
 <?php
 session_start();
 
-// Säkerhetsspärr: Endast admin får se denna sida
+//only admin can see this page
 if (empty($_SESSION['pseudo']) || $_SESSION['role'] !== 'admin') {
     header("Location: home.php");
     exit();
 }
 
 $mysqli = new mysqli("localhost", "pi_user", "skola123", "security_db");
-$message = "";
+$message = ""; //hold success or failure feedback
 $message_color = "red";
 
-// Hantera radering när admin har fyllt i sina bekräftelseuppgifter
+//runs only if the admin sumbits the delete confirmation 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_delete'])) {
+    //get the input of admin credtials to verufy
     $admin_pseudo = $_POST['admin_pseudo'];
     $admin_password = $_POST['admin_password'];
+    //target the selected account for removal
     $user_to_delete = $_POST['user_to_delete'];
 
-    // 1. Verifiera att det faktiskt är den riktiga admin som bekräftar med rätt lösenord
+    /* prepares, binds parameters, and executes a secure SQL query to 
+    safely fetch the matching admin's role from the database 
+    */
     $stmt = $mysqli->prepare("SELECT role FROM users WHERE pseudo = ? AND password = ?");
     $stmt->bind_param("ss", $admin_pseudo, $admin_password);
     $stmt->execute();
     $result = $stmt->get_result();
     $admin_check = $result->fetch_assoc();
 
+    //proceed only if credentials match as admin 
     if ($admin_check && $admin_check['role'] === 'admin') {
-        // 2. Kontrollen lyckades! Radera användarkontot
+        //delete the chosen account
         $delete_stmt = $mysqli->prepare("DELETE FROM users WHERE pseudo = ? AND role != 'admin'");
         $delete_stmt->bind_param("s", $user_to_delete);
+
+        //executes and evaluates if succeded
         if ($delete_stmt->execute()) {
             $message = "Account for '$user_to_delete' was successfully removed.";
-            $message_color = "green";
+            $message_color = "green"; //green for succeed, for html 
         } else {
             $message = "Error: Could not delete account.";
         }
@@ -67,16 +74,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_delete'])) {
 
             <div style="margin-top: 20px;">
                 <?php
-                // Hämta alla användare som inte är admin för att lista dem
+                //list all the useres
                 $result = $mysqli->query("SELECT pseudo, first_name, last_name, role FROM users WHERE role != 'admin'");
                 
                 if ($result->num_rows > 0) {
+                    //iterates through every user account
                     while ($row = $result->fetch_assoc()) {
                         echo "<div class='user-item'>";
                         echo "<div>";
                         echo "<b>" . htmlspecialchars($row['pseudo']) . "</b> - " . htmlspecialchars($row['first_name']) . " " . htmlspecialchars($row['last_name']);
                         echo "</div>";
-                        // När man klickar här öppnas modalen (pop-upen) via JavaScript och sätter rätt användarnamn i formuläret
+                        //interactive dashboard 
                         echo "<button type='button' class='remove-btn' onclick='openConfirmModal(\"" . htmlspecialchars($row['pseudo']) . "\")'>Remove</button>";
                         echo "</div>";
                     }
@@ -113,6 +121,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_delete'])) {
     </div>
 
     <script>
+
+        /*handles the admin confirmation popup box (modal) by 
+        dynamically setting the target username in the interface and 
+        hidden input form fields, and toggles the box visibility state.
+        */
         function openConfirmModal(username) {
             document.getElementById('targetUserText').innerText = username;
             document.getElementById('userToDeleteInput').value = username;
