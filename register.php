@@ -1,7 +1,12 @@
 <?php
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $mysqli = new mysqli("localhost", "pi_user", "skola123", "security_db");
+    $mysqli = new mysqli("localhost", "pi_user", "skola123", "security_db"); //connects to local database
 
+    /*
+    proceed if connected successfuly.
+    input the users credentials, personal idendtifiers
+    and hardcode the role
+     */
     if (!$mysqli->connect_errno) {
         $pseudo = $_POST['pseudo'];
         $password = $_POST['password'];
@@ -9,12 +14,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $last_name = $_POST['last_name'];
         $role = "user"; 
 
+        //insert the new user row
         $query_str = "INSERT INTO users (pseudo, password, first_name, last_name, role) 
                       VALUES ('$pseudo', '$password', '$first_name', '$last_name', '$role')";
-
+        
+        //executes query and checks if insertion succeeded
         if ($mysqli->query($query_str) === TRUE) {
             $mysqli->close();
-            header("Location: menu.php?msg=registered");
+            header("Location: menu.php?msg=registered");//redirects back
             exit();
         }
         $mysqli->close();
