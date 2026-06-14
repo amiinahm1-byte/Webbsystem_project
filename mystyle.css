@@ -1,71 +1,74 @@
 /* ==========================================================================
-   Global & Shared Layout Styles
-   ========================================================================== */
-body { 
+   Global and Shared Layout Styles
+*/
+body { /*for gui.php and below*/
     font-family: Arial; 
     padding: 20px; 
-    background-color: #f4f4f4; 
+    background-color: #e4e4e4; 
 }
 
-.hidden { 
+.hidden { /* hides elements form the screen */
     display: none; 
-} /* Döljer element helt */
+} 
 
-/* Shared Card Base Settings */
+/* styles content gui.php */
 .container { 
-    background: white; 
+    background: rgb(255, 255, 255); 
     padding: 20px; 
     border-radius: 10px; 
-    box-shadow: 0 0 10px rgba(0,0,0,0.1); 
+    
     margin-bottom: 20px; 
 }
 
-/* Dedicated Box Classes for unique file widths */
+/* centered box for the account handling list */
 .center-box-handling { 
     max-width: 600px; 
     margin: 50px auto; 
     padding: 40px; 
     background: white; 
     border-radius: 10px; 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+    
 }
 
+/* centered box with centered text for the home page*/
 .center-box-home { 
     max-width: 500px; 
     margin: 50px auto; 
     padding: 40px; 
     background: white; 
     border-radius: 10px; 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+    
     text-align: center; 
 }
 
+/* centered box for the login page*/
 .center-box-menu { 
     max-width: 450px; 
     margin: 50px auto; 
     padding: 30px; 
-    background: white; 
+    background: rgb(255, 255, 255); 
     border-radius: 10px; 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+    
 }
 
+/* centered box for the registration page */
 .center-box-register { 
     max-width: 450px; 
     margin: 50px auto; 
     padding: 30px; 
     background: white; 
     border-radius: 10px; 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+     
 }
 
 
-/* Handling och Register Inputs */
+/* handling och register Inputs */
 .center-box-handling input[type="text"], 
 .center-box-handling input[type="password"],
 .center-box-register input[type="text"], 
 .center-box-register input[type="password"],
 .modal-box input[type="text"], 
-.modal-box input[type="password"] { 
+.modal-box input[type="password"] { /* styles text and password inputs */
     width: 100%; 
     padding: 8px; 
     margin: 8px 0 15px 0; 
@@ -74,7 +77,7 @@ body {
     box-sizing: border-box; 
 }
 
-/* Menu Inputs */
+/* input styling to the login form */
 .center-box-menu input[type="text"], 
 .center-box-menu input[type="password"] { 
     width: 100%; 
@@ -85,7 +88,7 @@ body {
     box-sizing: border-box; 
 }
 
-/* Buttons with distinct target coloring */
+/* styles the green login button */
 .submit-btn-menu { 
     width: 100%; 
     background-color: #49af4c; 
@@ -97,10 +100,11 @@ body {
     font-size: 16px; 
 }
 
-.submit-btn-menu:hover { 
+.submit-btn-menu:hover { /* darkens the green button when hovering */
     background-color: #45a049; 
 }
 
+/* styles the blue register button */
 .submit-btn-register { 
     width: 100%; 
     background-color: #008CBA; 
@@ -115,6 +119,8 @@ body {
 /* ==========================================================================
    gui.php 
  */
+
+/* background block for time log */
 .log-box { 
     font-size: 18px; 
     padding: 10px; 
@@ -122,6 +128,7 @@ body {
     margin: 10px 0; 
 }
 
+/* big red text for the countdown */
 .countdown-badge { 
     font-size: 48px; 
     font-weight: bold; 
@@ -129,6 +136,7 @@ body {
     text-align: center; 
 }
 
+/*red notification boc when alarm turns on*/
 .alarm-trigger-box { 
     background-color: #ee392c; 
     color: white; 
@@ -142,6 +150,8 @@ body {
 
 /* ==========================================================================
    handling.php */
+
+/* allign user info */
 .user-item { 
     display: flex; 
     justify-content: space-between; 
@@ -150,6 +160,7 @@ body {
     border-bottom: 1px solid #eee; 
 }
 
+/* red delete button */
 .remove-btn { 
     background-color: #e24034; 
     color: white; 
@@ -158,11 +169,12 @@ body {
     border-radius: 4px; 
     cursor: pointer; 
 }
-
+/* darkens when hovering delete button */
 .remove-btn:hover { 
     background-color: #952424; 
 }
 
+/* confitmation window that pop ups when an adming clicks the remove button */
 .modal-box { 
     max-width: 400px; 
     margin: 100px auto; 
@@ -173,6 +185,8 @@ body {
 
 /* ==========================================================================
    home.php */
+
+/* blue button that opens the panel */
 .status-btn { 
     display: inline-block; 
     width: 100%; 
@@ -187,10 +201,12 @@ body {
     box-sizing: border-box; 
 }
 
+/* darkens when hovering */
 .status-btn:hover { 
     background-color: #0b7dda; 
 }
 
+/* yellow button for account handling, admins only */
 .admin-btn { 
     display: inline-block; 
     width: 100%; 
@@ -205,10 +221,12 @@ body {
     box-sizing: border-box; 
 }
 
+
 .admin-btn:hover { 
     background-color: #a0b22a; 
 }
 
+/* red button used to log out of the session */
 .logout-btn { 
     display: inline-block; 
     width: 100%; 
@@ -221,6 +239,7 @@ body {
     box-sizing: border-box; 
 }
 
+/* darkens when hovering */
 .logout-btn:hover { 
     background-color: #8f1d15; 
 }
